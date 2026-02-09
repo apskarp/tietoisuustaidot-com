@@ -78,8 +78,8 @@ export default async function BlogiSivu({
               <Pagination 
                 currentPage={page} 
                 totalPages={totalPages}
-                categoryParam={searchParams.category}
-                searchParam={searchParams.search}
+                categoryParam={category}
+                searchParam={search}
               />
             </>
           ) : (
