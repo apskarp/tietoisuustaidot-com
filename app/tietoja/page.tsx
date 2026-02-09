@@ -23,7 +23,7 @@ export default function TietojaPage() {
             <div className="flex-shrink-0">
               <div className="relative w-48 h-48 rounded-full overflow-hidden shadow-lg">
                 <Image
-                  src="https://mielenlaboratorio.fi/images/profile.jpg"
+                  src="/images/profile.jpg"
                   alt="Ari-Pekka Skarp"
                   fill
                   className="object-cover"
