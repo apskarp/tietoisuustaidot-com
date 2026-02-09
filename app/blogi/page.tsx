@@ -14,11 +14,12 @@ export const metadata = {
 export default async function BlogiSivu({
   searchParams,
 }: {
-  searchParams: { page?: string; category?: string; search?: string }
+  searchParams: Promise<{ page?: string; category?: string; search?: string }>
 }) {
-  const page = parseInt(searchParams.page || '1')
-  const categoryId = searchParams.category ? parseInt(searchParams.category) : undefined
-  const searchQuery = searchParams.search || undefined
+  const { page: pageParam, category, search } = await searchParams
+  const page = parseInt(pageParam || '1')
+  const categoryId = category ? parseInt(category) : undefined
+  const searchQuery = search || undefined
   
   const [{ posts, totalPages, total }, categories] = await Promise.all([
     getPosts({ 
