@@ -7,6 +7,7 @@ interface LocalPost {
   modified: string
   content: string
   excerpt: string
+  featuredImage: string
   categories: Array<{ slug: string; name: string }>
   tags: Array<{ slug: string; name: string }>
 }
@@ -100,13 +101,19 @@ function toWPPost(post: LocalPost, index: number): WPPost {
     content: { rendered: post.content },
     excerpt: { rendered: post.excerpt || `<p>${post.content.replace(/<[^>]*>/g, '').slice(0, 200)}...</p>` },
     author: 1,
-    featured_media: 0,
+    featured_media: post.featuredImage ? 1 : 0,
     categories: post.categories.map(c => {
       const found = categoryList.find(cat => cat.slug === c.slug)
       return found?.id ?? 0
     }),
     tags: [],
     _embedded: {
+      ...(post.featuredImage && {
+        'wp:featuredmedia': [{
+          source_url: post.featuredImage,
+          alt_text: post.title,
+        }],
+      }),
       'wp:term': [post.categories.map(c => {
         const found = categoryList.find(cat => cat.slug === c.slug)
         return { id: found?.id ?? 0, name: c.name, slug: c.slug }

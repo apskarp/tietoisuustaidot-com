@@ -48,6 +48,15 @@ while ((match = itemRegex.exec(xml)) !== null) {
     tags.push({ slug: tagMatch[1], name: tagMatch[2] })
   }
 
+  // Extract featured image from content (first img src)
+  let featuredImage = ''
+  const imgMatch = content.match(/<img[^>]+src="([^"]+)"/)
+  if (imgMatch) {
+    featuredImage = imgMatch[1]
+    // Remove query params like ?w=648
+    featuredImage = featuredImage.split('?')[0]
+  }
+
   items.push({
     title,
     slug,
@@ -55,6 +64,7 @@ while ((match = itemRegex.exec(xml)) !== null) {
     modified: modified ? `${modified.replace(' ', 'T')}Z` : '',
     content,
     excerpt,
+    featuredImage,
     categories,
     tags,
   })
