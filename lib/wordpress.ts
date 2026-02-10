@@ -1,5 +1,10 @@
 const WP_API_URL = 'https://tietoisuustaidot.com/wp-json/wp/v2'
 
+const WP_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (compatible; NextJS/1.0; +https://tietoisuustaidot.com)',
+  'Accept': 'application/json',
+}
+
 export interface WPPost {
   id: number
   date: string
@@ -76,6 +81,7 @@ export async function getPosts(params?: {
 
   try {
     const res = await fetch(`${WP_API_URL}/posts?${searchParams}`, {
+      headers: WP_HEADERS,
       next: { revalidate: 3600 } // Cache 1 tunti
     })
 
@@ -101,6 +107,7 @@ export async function getPosts(params?: {
 export async function getPostBySlug(slug: string): Promise<WPPost | null> {
   try {
     const res = await fetch(`${WP_API_URL}/posts?slug=${slug}&_embed=true`, {
+      headers: WP_HEADERS,
       next: { revalidate: 3600 }
     })
 
@@ -122,6 +129,7 @@ export async function getPostBySlug(slug: string): Promise<WPPost | null> {
 export async function getCategories(): Promise<WPCategory[]> {
   try {
     const res = await fetch(`${WP_API_URL}/categories?per_page=100&orderby=count&order=desc`, {
+      headers: WP_HEADERS,
       next: { revalidate: 86400 } // Cache 24h
     })
 
@@ -158,7 +166,7 @@ export async function getAllPostSlugs(): Promise<string[]> {
     while (hasMore) {
       const res = await fetch(
         `${WP_API_URL}/posts?per_page=100&page=${page}&_fields=slug`,
-        { next: { revalidate: 86400 } }
+        { headers: WP_HEADERS, next: { revalidate: 86400 } }
       )
 
       if (!res.ok) break
