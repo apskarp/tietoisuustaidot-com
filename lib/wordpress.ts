@@ -1,8 +1,8 @@
-const WP_API_URL = '/wp-proxy/wp/v2'
+const WP_API_URL = 'https://tietoisuustaidot.com/index.php?rest_route=/wp/v2'
 
 const WP_HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Vercel Proxy)',
-  'Content-Type': 'application/json',
+  'User-Agent': 'Mozilla/5.0 (compatible; NextJS/1.0; +https://tietoisuustaidot.com)',
+  'Accept': 'application/json',
 }
 
 export interface WPPost {
