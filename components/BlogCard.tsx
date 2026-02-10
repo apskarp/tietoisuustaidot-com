@@ -2,7 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { format } from 'date-fns'
 import { fi } from 'date-fns/locale'
-import { WPPost } from '@/lib/wordpress'
+import { WPPost, getPostUrl } from '@/lib/wordpress'
 
 export function BlogCard({ post }: { post: WPPost }) {
   const featuredImage = post._embedded?.['wp:featuredmedia']?.[0]
@@ -17,7 +17,7 @@ export function BlogCard({ post }: { post: WPPost }) {
 
   return (
     <Link 
-      href={`/blogi/${post.slug}`}
+      href={getPostUrl(post)}
       className="group block border border-gray-200 rounded-lg overflow-hidden hover:shadow-xl transition-all duration-300 bg-white"
     >
       {/* Kuva */}

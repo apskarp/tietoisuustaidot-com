@@ -1,27 +1,26 @@
 import { notFound } from 'next/navigation'
 import { format } from 'date-fns'
 import { fi } from 'date-fns/locale'
-import { getPostBySlug, getAllPostSlugs } from '@/lib/wordpress'
+import { getPostBySlug, getAllPostPaths } from '@/lib/wordpress'
 import Image from 'next/image'
 import Link from 'next/link'
 
-// Generoidaan staattiset sivut build-aikana
 export async function generateStaticParams() {
-  const slugs = await getAllPostSlugs()
-  
-  return slugs.slice(0, 100).map(slug => ({
-    slug: slug
+  const paths = await getAllPostPaths()
+  return paths.map(p => ({
+    path: [p.year, p.month, p.day, p.slug]
   }))
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params
+export async function generateMetadata({ params }: { params: Promise<{ path: string[] }> }) {
+  const { path } = await params
+  if (path.length !== 4) return { title: 'Sivua ei löytynyt' }
+
+  const slug = path[3]
   const post = await getPostBySlug(slug)
-  
+
   if (!post) {
-    return {
-      title: 'Kirjoitusta ei löytynyt',
-    }
+    return { title: 'Kirjoitusta ei löytynyt' }
   }
 
   const cleanExcerpt = post.excerpt.rendered
@@ -55,8 +54,15 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 }
 
-export default async function BlogiArtikkeli({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params
+export default async function BlogiArtikkeli({ params }: { params: Promise<{ path: string[] }> }) {
+  const { path } = await params
+
+  // Only handle /YYYY/MM/DD/slug format
+  if (path.length !== 4) {
+    notFound()
+  }
+
+  const slug = path[3]
   const post = await getPostBySlug(slug)
 
   if (!post) {
@@ -106,7 +112,7 @@ export default async function BlogiArtikkeli({ params }: { params: Promise<{ slu
       )}
 
       {/* Otsikko */}
-      <h1 
+      <h1
         className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold mb-6 leading-tight"
         dangerouslySetInnerHTML={{ __html: post.title.rendered }}
       />
@@ -119,7 +125,7 @@ export default async function BlogiArtikkeli({ params }: { params: Promise<{ slu
           </svg>
           {format(new Date(post.date), 'd. MMMM yyyy', { locale: fi })}
         </time>
-        
+
         {author && (
           <div className="flex items-center gap-2">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -145,7 +151,7 @@ export default async function BlogiArtikkeli({ params }: { params: Promise<{ slu
       )}
 
       {/* Sisältö */}
-      <div 
+      <div
         className="prose prose-lg max-w-none"
         dangerouslySetInnerHTML={{ __html: post.content.rendered }}
       />
@@ -159,7 +165,7 @@ export default async function BlogiArtikkeli({ params }: { params: Promise<{ slu
 
       {/* Takaisin blogiin */}
       <div className="mt-12 pt-8 border-t border-gray-200">
-        <Link 
+        <Link
           href="/blogi"
           className="inline-flex items-center text-primary-600 hover:text-primary-700 font-medium"
         >

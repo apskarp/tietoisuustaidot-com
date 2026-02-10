@@ -181,3 +181,23 @@ export async function getFeaturedPosts(count: number = 3): Promise<WPPost[]> {
 export async function getAllPostSlugs(): Promise<string[]> {
   return allPosts.map(p => p.slug)
 }
+
+export function getPostUrl(post: WPPost): string {
+  const d = new Date(post.date)
+  const year = d.getUTCFullYear()
+  const month = String(d.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(d.getUTCDate()).padStart(2, '0')
+  return `/${year}/${month}/${day}/${post.slug}`
+}
+
+export async function getAllPostPaths(): Promise<Array<{ year: string; month: string; day: string; slug: string }>> {
+  return allPosts.map(p => {
+    const d = new Date(p.date)
+    return {
+      year: String(d.getUTCFullYear()),
+      month: String(d.getUTCMonth() + 1).padStart(2, '0'),
+      day: String(d.getUTCDate()).padStart(2, '0'),
+      slug: p.slug,
+    }
+  })
+}

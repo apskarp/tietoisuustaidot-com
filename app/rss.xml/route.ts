@@ -1,4 +1,4 @@
-import { getPosts } from '@/lib/wordpress'
+import { getPosts, getPostUrl } from '@/lib/wordpress'
 
 function escapeXml(unsafe: string): string {
   return unsafe
@@ -33,8 +33,8 @@ export async function GET() {
       return `
     <item>
       <title>${escapeXml(cleanTitle)}</title>
-      <link>https://tietoisuustaidot.com/blogi/${post.slug}</link>
-      <guid>https://tietoisuustaidot.com/blogi/${post.slug}</guid>
+      <link>https://tietoisuustaidot.com${getPostUrl(post)}</link>
+      <guid>https://tietoisuustaidot.com${getPostUrl(post)}</guid>
       <pubDate>${new Date(post.date).toUTCString()}</pubDate>
       <description>${escapeXml(cleanExcerpt)}</description>
       <content:encoded><![CDATA[${post.content.rendered}]]></content:encoded>

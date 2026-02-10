@@ -1,9 +1,9 @@
-import { getAllPostSlugs } from '@/lib/wordpress'
+import { getAllPostPaths } from '@/lib/wordpress'
 
 export async function GET() {
-  const slugs = await getAllPostSlugs()
+  const paths = await getAllPostPaths()
   const baseUrl = 'https://tietoisuustaidot.com'
-  
+
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
@@ -21,9 +21,9 @@ export async function GET() {
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
-  ${slugs.map(slug => `
+  ${paths.map(p => `
   <url>
-    <loc>${baseUrl}/blogi/${slug}</loc>
+    <loc>${baseUrl}/${p.year}/${p.month}/${p.day}/${p.slug}</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>`).join('')}
