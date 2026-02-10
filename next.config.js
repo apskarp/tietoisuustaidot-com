@@ -12,6 +12,14 @@ const nextConfig = {
       },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: '/wp-proxy/:path*',
+        destination: 'https://tietoisuustaidot.com/index.php?rest_route=/:path*',
+      },
+    ];
+  },
 }
 
 module.exports = nextConfig
