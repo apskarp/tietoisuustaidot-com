@@ -1,9 +1,17 @@
-const WP_API_URL = 'https://tietoisuustaidot.com/index.php?rest_route=/wp/v2'
+import postsData from '@/data/posts.json'
 
-const WP_HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (compatible; NextJS/1.0; +https://tietoisuustaidot.com)',
-  'Accept': 'application/json',
+interface LocalPost {
+  title: string
+  slug: string
+  date: string
+  modified: string
+  content: string
+  excerpt: string
+  categories: Array<{ slug: string; name: string }>
+  tags: Array<{ slug: string; name: string }>
 }
+
+const allPosts: LocalPost[] = postsData as LocalPost[]
 
 export interface WPPost {
   id: number
@@ -60,128 +68,109 @@ export interface PostsResponse {
   total: number
 }
 
-/**
- * Hae blogikirjoitukset WordPress REST API:sta
- */
+// Build category list from all posts
+function buildCategories(): WPCategory[] {
+  const catMap = new Map<string, { name: string; count: number }>()
+  for (const post of allPosts) {
+    for (const cat of post.categories) {
+      const existing = catMap.get(cat.slug)
+      if (existing) {
+        existing.count++
+      } else {
+        catMap.set(cat.slug, { name: cat.name, count: 1 })
+      }
+    }
+  }
+  let id = 1
+  return Array.from(catMap.entries())
+    .map(([slug, { name, count }]) => ({ id: id++, slug, name, count, description: '' }))
+    .sort((a, b) => b.count - a.count)
+}
+
+const categoryList = buildCategories()
+
+function toWPPost(post: LocalPost, index: number): WPPost {
+  return {
+    id: index + 1,
+    date: post.date,
+    modified: post.modified,
+    slug: post.slug,
+    status: 'publish',
+    title: { rendered: post.title },
+    content: { rendered: post.content },
+    excerpt: { rendered: post.excerpt || `<p>${post.content.replace(/<[^>]*>/g, '').slice(0, 200)}...</p>` },
+    author: 1,
+    featured_media: 0,
+    categories: post.categories.map(c => {
+      const found = categoryList.find(cat => cat.slug === c.slug)
+      return found?.id ?? 0
+    }),
+    tags: [],
+    _embedded: {
+      'wp:term': [post.categories.map(c => {
+        const found = categoryList.find(cat => cat.slug === c.slug)
+        return { id: found?.id ?? 0, name: c.name, slug: c.slug }
+      })],
+      author: [{ id: 1, name: 'Ari-Pekka Skarp', description: '' }],
+    },
+  }
+}
+
 export async function getPosts(params?: {
   page?: number
   perPage?: number
   categories?: number[]
   search?: string
 }): Promise<PostsResponse> {
-  const searchParams = new URLSearchParams({
-    _embed: 'true',
-    per_page: (params?.perPage || 12).toString(),
-    page: (params?.page || 1).toString(),
-    ...(params?.categories && params.categories.length > 0 && { 
-      categories: params.categories.join(',') 
-    }),
-    ...(params?.search && { search: params.search }),
-  })
+  const page = params?.page || 1
+  const perPage = params?.perPage || 12
 
-  try {
-    const res = await fetch(`${WP_API_URL}/posts?${searchParams}`, {
-      headers: WP_HEADERS,
-      next: { revalidate: 3600 } // Cache 1 tunti
-    })
+  let filtered = allPosts
 
-    if (!res.ok) {
-      console.error('WordPress API error:', res.status, res.statusText)
-      return { posts: [], totalPages: 0, total: 0 }
-    }
+  if (params?.categories && params.categories.length > 0) {
+    filtered = filtered.filter(post =>
+      post.categories.some(c => {
+        const found = categoryList.find(cat => cat.slug === c.slug)
+        return found && params.categories!.includes(found.id)
+      })
+    )
+  }
 
-    const totalPages = parseInt(res.headers.get('X-WP-TotalPages') || '1')
-    const total = parseInt(res.headers.get('X-WP-Total') || '0')
-    const posts = await res.json()
+  if (params?.search) {
+    const q = params.search.toLowerCase()
+    filtered = filtered.filter(post =>
+      post.title.toLowerCase().includes(q) ||
+      post.content.toLowerCase().includes(q)
+    )
+  }
 
-    return { posts, totalPages, total }
-  } catch (error) {
-    console.error('Failed to fetch posts:', error)
-    return { posts: [], totalPages: 0, total: 0 }
+  const total = filtered.length
+  const totalPages = Math.ceil(total / perPage)
+  const start = (page - 1) * perPage
+  const paged = filtered.slice(start, start + perPage)
+
+  return {
+    posts: paged.map((p, i) => toWPPost(p, start + i)),
+    totalPages,
+    total,
   }
 }
 
-/**
- * Hae yksittäinen blogikirjoitus slugin perusteella
- */
 export async function getPostBySlug(slug: string): Promise<WPPost | null> {
-  try {
-    const res = await fetch(`${WP_API_URL}/posts?slug=${slug}&_embed=true`, {
-      headers: WP_HEADERS,
-      next: { revalidate: 3600 }
-    })
-
-    if (!res.ok) {
-      return null
-    }
-
-    const posts = await res.json()
-    return posts[0] || null
-  } catch (error) {
-    console.error('Failed to fetch post:', error)
-    return null
-  }
+  const index = allPosts.findIndex(p => p.slug === slug)
+  if (index === -1) return null
+  return toWPPost(allPosts[index], index)
 }
 
-/**
- * Hae kaikki kategoriat
- */
 export async function getCategories(): Promise<WPCategory[]> {
-  try {
-    const res = await fetch(`${WP_API_URL}/categories?per_page=100&orderby=count&order=desc`, {
-      headers: WP_HEADERS,
-      next: { revalidate: 86400 } // Cache 24h
-    })
-
-    if (!res.ok) {
-      console.error('Failed to fetch categories:', res.status)
-      return []
-    }
-
-    const categories = await res.json()
-    return categories.filter((cat: WPCategory) => cat.count > 0)
-  } catch (error) {
-    console.error('Failed to fetch categories:', error)
-    return []
-  }
+  return categoryList.filter(cat => cat.count > 0)
 }
 
-/**
- * Hae uusimmat kirjoitukset (esim. etusivulle)
- */
 export async function getFeaturedPosts(count: number = 3): Promise<WPPost[]> {
   const { posts } = await getPosts({ perPage: count })
   return posts
 }
 
-/**
- * Hae kaikki postien slugit (static generation varten)
- */
 export async function getAllPostSlugs(): Promise<string[]> {
-  try {
-    const slugs: string[] = []
-    let page = 1
-    let hasMore = true
-
-    while (hasMore) {
-      const res = await fetch(
-        `${WP_API_URL}/posts?per_page=100&page=${page}&_fields=slug`,
-        { headers: WP_HEADERS, next: { revalidate: 86400 } }
-      )
-
-      if (!res.ok) break
-
-      const posts = await res.json()
-      slugs.push(...posts.map((p: { slug: string }) => p.slug))
-
-      const totalPages = parseInt(res.headers.get('X-WP-TotalPages') || '1')
-      hasMore = page < totalPages
-      page++
-    }
-
-    return slugs
-  } catch (error) {
-    console.error('Failed to fetch post slugs:', error)
-    return []
-  }
+  return allPosts.map(p => p.slug)
 }
